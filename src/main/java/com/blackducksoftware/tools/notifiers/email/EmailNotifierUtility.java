@@ -28,7 +28,9 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.log4j.Logger;
 
+import com.blackducksoftware.tools.commonframework.connector.protex.ProtexServerWrapper;
 import com.blackducksoftware.tools.commonframework.standard.email.CFEmailNotifier;
+import com.blackducksoftware.tools.commonframework.standard.protex.ProtexProjectPojo;
 import com.blackducksoftware.tools.notifiers.common.IHandler;
 import com.blackducksoftware.tools.notifiers.common.NotifierConstants;
 import com.blackducksoftware.tools.notifiers.common.NotifierException;
@@ -137,7 +139,9 @@ public class EmailNotifierUtility {
 
 		IHandler notificationHandler = new EmailHandler(emailConfig,
 			emailer);
-		NotifierProcessor enp = new NotifierProcessor(emailConfig,
+		ProtexServerWrapper<ProtexProjectPojo> psw = new ProtexServerWrapper<>(
+			emailConfig.getServerBean(), emailConfig, true);
+		NotifierProcessor enp = new NotifierProcessor(emailConfig, psw,
 			notificationHandler, emailer.getEmailContentMap(),
 			projectName, projectName);
 		enp.process();

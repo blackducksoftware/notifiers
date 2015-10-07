@@ -28,7 +28,9 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.log4j.Logger;
 
+import com.blackducksoftware.tools.commonframework.connector.protex.ProtexServerWrapper;
 import com.blackducksoftware.tools.commonframework.standard.email.EmailContentMap;
+import com.blackducksoftware.tools.commonframework.standard.protex.ProtexProjectPojo;
 import com.blackducksoftware.tools.notifiers.common.IHandler;
 import com.blackducksoftware.tools.notifiers.common.NotifierConstants;
 import com.blackducksoftware.tools.notifiers.common.NotifierProcessor;
@@ -123,7 +125,9 @@ public class JiraIntegrationUtility {
 		EmailContentMap keysOnlyContentMap = createKeysOnlyContentMap();
 
 		IHandler notificationHandler = new JIRAHandler(jiraConfig);
-		NotifierProcessor enp = new NotifierProcessor(jiraConfig,
+		ProtexServerWrapper<ProtexProjectPojo> psw = new ProtexServerWrapper<>(
+			jiraConfig.getServerBean(), jiraConfig, true);
+		NotifierProcessor enp = new NotifierProcessor(jiraConfig, psw,
 			notificationHandler, keysOnlyContentMap, projectName,
 			jiraProjectName);
 		enp.process();

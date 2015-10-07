@@ -63,6 +63,7 @@ public class NotifierProcessor {
      * @throws Exception
      */
     public NotifierProcessor(NotifierConfig config,
+	    ProtexServerWrapper<ProtexProjectPojo> psw,
 	    IHandler notificationHandler, EmailContentMap keysOnlyContentMap,
 	    String projectName, String projectAlias) throws Exception {
 
@@ -72,7 +73,7 @@ public class NotifierProcessor {
 
 	this.projectName = projectName;
 	this.projectAlias = projectAlias;
-	psw = new ProtexServerWrapper<>(config.getServerBean(), config, true);
+	this.psw = psw;
     }
 
     /**
