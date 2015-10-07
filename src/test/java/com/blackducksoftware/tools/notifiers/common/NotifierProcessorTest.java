@@ -24,7 +24,6 @@ import com.blackducksoftware.sdk.protex.project.bom.BomComponent;
 import com.blackducksoftware.tools.commonframework.connector.protex.CodeTreeHelper;
 import com.blackducksoftware.tools.commonframework.connector.protex.ProtexAPIWrapper;
 import com.blackducksoftware.tools.commonframework.connector.protex.ProtexServerWrapper;
-import com.blackducksoftware.tools.commonframework.standard.common.ProjectPojo;
 import com.blackducksoftware.tools.commonframework.standard.email.CFEmailNotifier;
 import com.blackducksoftware.tools.commonframework.standard.email.EmailContentMap;
 import com.blackducksoftware.tools.commonframework.standard.protex.ProtexProjectPojo;
@@ -54,6 +53,10 @@ public class NotifierProcessorTest {
 
     private static ProtexProjectPojo mockProjectPojo;
 
+    private static CFEmailNotifier mockEmailer;
+    private static EmailNotifierUtilityConfig emailConfig;
+    private static EmailContentMap emailContentMap;
+
     @BeforeClass
     public static void setUpBeforeClass() throws Exception {
 
@@ -64,12 +67,14 @@ public class NotifierProcessorTest {
 	mockLicenseApi = mock(LicenseApi.class);
 	mockBomApi = mock(BomApi.class);
 
+	// Make the mock wrapper return the mock APIs
 	when(mockProtexServerWrapper.getInternalApiWrapper()).thenReturn(
 		mockApiWrapper);
 	when(mockApiWrapper.getProjectApi()).thenReturn(mockProjectApi);
 	when(mockApiWrapper.getLicenseApi()).thenReturn(mockLicenseApi);
 	when(mockApiWrapper.getBomApi()).thenReturn(mockBomApi);
 
+	// Mock project
 	mockProjectPojo = mock(ProtexProjectPojo.class);
 	when(mockProtexServerWrapper.getProjectByName(PROJECT_NAME))
 		.thenReturn(mockProjectPojo);
@@ -79,6 +84,7 @@ public class NotifierProcessorTest {
 		LAST_ANALYZED_DATE_STRING);
 	when(mockProjectPojo.getProjectKey()).thenReturn(PROJECT_ID_STRING);
 
+	// List of mock BOM components (size=1)
 	List<BomComponent> bomComponents = new ArrayList<>();
 	BomComponent mockBomComponent = mock(BomComponent.class);
 	when(mockBomComponent.getComponentName()).thenReturn(
@@ -91,6 +97,7 @@ public class NotifierProcessorTest {
 	LicenseInfo mockLicenseInfo = mock(LicenseInfo.class);
 	when(mockLicenseInfo.getLicenseId()).thenReturn(LICENSE_ID_STRING);
 
+	// Mock license
 	GlobalLicense mockGlobalLicense = mock(GlobalLicense.class);
 	when(mockGlobalLicense.getName()).thenReturn(LICENSE_NAME);
 
@@ -102,11 +109,22 @@ public class NotifierProcessorTest {
 	when(mockBomApi.getBomComponents(PROJECT_ID_STRING)).thenReturn(
 		bomComponents);
 
+	// Pending ID count
 	CodeTreeHelper mockTreeHelper = mock(CodeTreeHelper.class);
 	when(mockProtexServerWrapper.getCodeTreeHelper()).thenReturn(
 		mockTreeHelper);
 	when(mockTreeHelper.getTotalPendingIDCount(mockProjectPojo))
 		.thenReturn(NUM_PENDING_ID_COMPONENTS);
+
+	// Configuration manager
+	Properties props = createBasicProperties();
+	emailConfig = new EmailNotifierUtilityConfig(props);
+
+	// Email Notifier
+	mockEmailer = mock(CFEmailNotifier.class);
+	when(mockEmailer.isConfigured()).thenReturn(true);
+	emailContentMap = createEmailContentMap();
+	when(mockEmailer.getEmailContentMap()).thenReturn(emailContentMap);
     }
 
     @AfterClass
@@ -115,25 +133,18 @@ public class NotifierProcessorTest {
 
     @Test
     public void testBasicEmail() throws Exception {
-	Properties props = createBasicProperties();
 
-	// Configuration manager
-	EmailNotifierUtilityConfig emailConfig = new EmailNotifierUtilityConfig(
-		props);
-
-	// Email Notifier
-	CFEmailNotifier emailer = mock(CFEmailNotifier.class);
-	when(emailer.isConfigured()).thenReturn(true);
-	EmailContentMap emailContentMap = createEmailContentMap();
-	when(emailer.getEmailContentMap()).thenReturn(emailContentMap);
-
-	IHandler notificationHandler = new EmailHandler(emailConfig, emailer);
-	NotifierProcessor enp = new NotifierProcessor(emailConfig,
+	// Create the Email notifier
+	IHandler notificationHandler = new EmailHandler(emailConfig,
+		mockEmailer);
+	NotifierProcessor notifier = new NotifierProcessor(emailConfig,
 		mockProtexServerWrapper, notificationHandler,
-		emailer.getEmailContentMap(), PROJECT_NAME, null);
+		mockEmailer.getEmailContentMap(), PROJECT_NAME, null);
 
-	EmailContentMap publishedContent = enp.process();
+	// Run notifier to send mail
+	EmailContentMap publishedContent = notifier.process();
 
+	// Verify the email contents map
 	assertEquals(PROJECT_URL, publishedContent.get("protexURL"));
 	assertEquals(CONFLICT_STRING,
 		publishedContent.get("protexConflictingComponents"));
@@ -142,17 +153,18 @@ public class NotifierProcessorTest {
 	assertEquals(null, publishedContent.get("projectName"));
 	assertEquals(TOTAL_PENDING_STRING,
 		publishedContent.get("protexTotalPending"));
-	assertEquals(
-		NON_APPROVED_STRING,
+	assertEquals(NON_APPROVED_STRING,
 		publishedContent.get("protexNonApprovedComponents"));
-	verify(emailer).sendEmail(
-		Matchers.isA(ProjectPojo.class),
+
+	// Verify that email was (mock) sent
+	verify(mockEmailer).sendEmail(
+		Matchers.eq(mockProjectPojo),
 		Matchers.eq(emailContentMap),
 		Matchers.eq(emailConfig.getNotificationRulesConfiguration()
 			.getRules()));
     }
 
-    private Properties createBasicProperties() {
+    private static Properties createBasicProperties() {
 	Properties props = new Properties();
 	props.setProperty("protex.server.name", "https://se-px01.dc1.lan/");
 	props.setProperty("protex.user.name",
@@ -170,7 +182,7 @@ public class NotifierProcessorTest {
 	return props;
     }
 
-    private EmailContentMap createEmailContentMap() {
+    private static EmailContentMap createEmailContentMap() {
 	EmailContentMap emailContentMap = new EmailContentMap();
 	emailContentMap.put("protexURL", null);
 	emailContentMap.put("protexConflictingComponents", null);
