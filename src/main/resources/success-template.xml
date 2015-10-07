@@ -1,0 +1,58 @@
+## THIS IS A SAMPLE Template.  Add your variables in form of ${your variable}.
+## available Protex variables to use:
+## projectName:  Name of your protex project
+## protexAnalysisFinishDate: Last analyzed date.
+## protexTotalPending:  Total number of pending identifications
+## protexConflictingComponents:  A list of all conflicting components with version and license.
+## protexNonApprovedComponents:  A list of all non-approved components in the BOM.
+## protexURL:  A link to the Protex project.
+
+<email> 
+    <from>${smtpFrom}</from> 
+    <to>${smtpTo}</to> 
+    <subject>Protex Project information for: ${projectName}</subject> 
+    <style><![CDATA[
+    
+    <STYLE type="text/css">
+    b {color: darkBlue}
+    table 
+    { 
+    	padding: 3px;
+    }
+    th {
+    	text-align: left;
+	}
+    </STYLE>
+
+    
+    ]]></style>
+    <body><![CDATA[
+   
+
+    <p><b>Project Name:</b> ${projectName} </p>
+    <p><b>Scan Finish Time:</b> ${protexAnalysisFinishDate} </p>
+  
+
+		<p>	
+			<b>Total Pending Files:</b>  ${protexTotalPending}	
+		</p>
+
+		<b>Conflicting Components</b>
+		<hr>
+		<p>
+			${protexConflictingComponents}
+		</p>
+
+		<b>Non Approved Components</b>
+		<hr>
+		<p>
+			${protexNonApprovedComponents}
+		</p>
+
+
+		<p>
+			<b>BOM URL for project:</b> ${protexURL} 
+		</p>
+
+    ]]></body> 
+</email>

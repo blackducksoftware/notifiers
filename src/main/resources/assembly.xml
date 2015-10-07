@@ -1,0 +1,76 @@
+<assembly>  
+	<includeBaseDirectory>false</includeBaseDirectory> 
+	<formats>
+		<format>zip</format> 
+	</formats> 
+	  <id>${project.version}</id>
+	<fileSets> 
+	
+		  <fileSet>
+	       <directory>${project.basedir}/src/main/resources</directory>
+	       	<outputDirectory>/properties</outputDirectory>
+	       	<includes>
+				<include>*</include>
+			</includes>
+			<excludes>
+				<exclude>*assembly*</exclude>
+				<exclude>*info*</exclude> <!--  This goes in root -->
+			</excludes>
+	    </fileSet>
+		<!--  Drop Readme, notices, license into root -->
+	    <fileSet>
+	       <directory>${project.basedir}</directory>
+	       	<outputDirectory>/</outputDirectory>
+	       	<includes>
+				<include>README.md</include>
+				<include>LICENSE.txt</include>
+				<include>notices.html</include>
+			</includes>
+	    </fileSet>
+		 <fileSet>
+	       <directory>${project.basedir}/src/main/resources/info/JiraConnector</directory>
+	       	<outputDirectory>/samples/JiraConnector</outputDirectory>
+	       	<includes>
+				<include>**</include>
+			</includes>
+	    </fileSet>
+	    <fileSet>
+	       <directory>${project.basedir}/src/main/resources/info/EmailNotifier</directory>
+	       	<outputDirectory>/samples/EmailNotifier</outputDirectory>
+	       	<includes>
+				<include>**</include>
+			</includes>
+	    </fileSet>
+		<fileSet> 
+			<directory>${project.build.directory}/deploy/bin</directory> 
+			<outputDirectory>/bin</outputDirectory>
+			<includes>
+				<include>*</include>
+			</includes>
+			<fileMode>0777</fileMode>
+		</fileSet> 
+		<fileSet> 
+			<directory>${project.build.directory}/deploy/lib</directory> 
+			<outputDirectory>/lib</outputDirectory>
+			<includes>
+				<include>*.jar</include>
+			</includes>
+		</fileSet> 	
+		<!--  Supply the sources jar -->
+		<fileSet>
+			<directory>${project.basedir}/target</directory> 
+				<outputDirectory>/</outputDirectory>
+				<includes>
+					<include>*sources*.jar</include>
+				</includes>
+		</fileSet>
+		<!--  Any external non-maven libs  -->
+		<fileSet> 
+			<directory>${project.basedir}/externallib</directory> 
+			<outputDirectory>/lib</outputDirectory>
+			<includes>
+				<include>*.jar</include>
+			</includes>
+		</fileSet> 	
+	</fileSets> 
+</assembly> 
