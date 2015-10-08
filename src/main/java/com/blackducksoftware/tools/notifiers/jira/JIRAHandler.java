@@ -31,9 +31,9 @@ import com.blackducksoftware.tools.commonframework.standard.email.EmailTriggerRu
 import com.blackducksoftware.tools.notifiers.common.HandlerUtils;
 import com.blackducksoftware.tools.notifiers.common.IHandler;
 import com.blackducksoftware.tools.notifiers.common.NotifierConstants;
+import com.blackducksoftware.tools.notifiers.common.NotifierRuleEnums.EN_RULE;
 import com.blackducksoftware.tools.notifiers.common.ProjectInfo;
 import com.blackducksoftware.tools.notifiers.common.ProtexInformationCollector;
-import com.blackducksoftware.tools.notifiers.common.NotifierRuleEnums.EN_RULE;
 
 /**
  * Class for handling JIRA issue lookup/creation
@@ -51,12 +51,10 @@ public class JIRAHandler implements IHandler {
     private ProtexInformationCollector pic;
     private boolean dryRun = false;
 
-    public JIRAHandler(JiraIntegrationUtilityConfig config) throws Exception {
+    public JIRAHandler(JiraIntegrationUtilityConfig config,
+	    JiraConnector jiraConnector) throws Exception {
 	this.config = config;
-	JiraInfo jiraInfo = config.getJiraInfo();
-
-	jiraConnector = new JiraConnector(jiraInfo.getUrl(),
-		jiraInfo.getAdminName(), jiraInfo.getAdminPassword());
+	this.jiraConnector = jiraConnector;
 
 	dryRun = config.isDryRun();
     }

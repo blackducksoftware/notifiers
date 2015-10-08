@@ -123,8 +123,12 @@ public class JiraIntegrationUtility {
 	    // Call the processor
 	    try {
 		EmailContentMap keysOnlyContentMap = createKeysOnlyContentMap();
-
-		IHandler notificationHandler = new JIRAHandler(jiraConfig);
+		JiraInfo jiraInfo = jiraConfig.getJiraInfo();
+		JiraConnector jiraConnector = new JiraConnector(
+			jiraInfo.getUrl(), jiraInfo.getAdminName(),
+			jiraInfo.getAdminPassword());
+		IHandler notificationHandler = new JIRAHandler(jiraConfig,
+			jiraConnector);
 		ProtexServerWrapper<ProtexProjectPojo> psw = new ProtexServerWrapper<>(
 			jiraConfig.getServerBean(), jiraConfig, true);
 		NotifierProcessor enp = new NotifierProcessor(jiraConfig, psw,

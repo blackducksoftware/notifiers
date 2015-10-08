@@ -14,6 +14,8 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.mockito.Matchers;
 
+import com.atlassian.jira.rest.client.api.domain.BasicProject;
+import com.atlassian.jira.rest.client.api.domain.Issue;
 import com.blackducksoftware.sdk.protex.common.ApprovalState;
 import com.blackducksoftware.sdk.protex.license.GlobalLicense;
 import com.blackducksoftware.sdk.protex.license.LicenseApi;
@@ -29,9 +31,17 @@ import com.blackducksoftware.tools.commonframework.standard.email.EmailContentMa
 import com.blackducksoftware.tools.commonframework.standard.protex.ProtexProjectPojo;
 import com.blackducksoftware.tools.notifiers.email.EmailHandler;
 import com.blackducksoftware.tools.notifiers.email.EmailNotifierUtilityConfig;
+import com.blackducksoftware.tools.notifiers.jira.JIRAHandler;
+import com.blackducksoftware.tools.notifiers.jira.JiraConnector;
+import com.blackducksoftware.tools.notifiers.jira.JiraIntegrationUtilityConfig;
 
 public class NotifierProcessorTest {
+    private static final String PROTEX_SUMMARY_COMBINED = "Protex Summary";
     private static final String NON_APPROVED_STRING = "<table><tr><th>Component Name</th><th>Version</th><th>License</th></tr><tr><td>Test Component Name</td><td>Test Component Version</td><td>Test License Name</td></tr></table>";
+    private static final String JIRA_ISSUE_DESCRIPTION = "Pending: 99\n"
+	    + "Conflicting Components:\n"
+	    + "<table><tr><th>Component Name</th><th>Version</th><th>License</th></tr><tr><td>Test Component Name</td><td>Test Component Version</td><td>Test License Name</td></tr></table>\n"
+	    + "Project URL: https://protex.test.com//protex/ProtexIPIdentifyFolderBillOfMaterialsContainer?isAtTop=true&ProtexIPProjectId=c_junitemailnotifier2_8710&ProtexIPIdentifyFileViewLevel=folder&ProtexIPIdentifyFileId=-1";
     private static final String LICENSE_NAME = "Test License Name";
     private static final String LICENSE_ID_STRING = "testLicenseId";
     private static final String PROJECT_ID_STRING = "projectId";
@@ -54,7 +64,6 @@ public class NotifierProcessorTest {
     private static ProtexProjectPojo mockProjectPojo;
 
     private static CFEmailNotifier mockEmailer;
-    private static EmailNotifierUtilityConfig emailConfig;
     private static EmailContentMap emailContentMap;
 
     @BeforeClass
@@ -116,10 +125,6 @@ public class NotifierProcessorTest {
 	when(mockTreeHelper.getTotalPendingIDCount(mockProjectPojo))
 		.thenReturn(NUM_PENDING_ID_COMPONENTS);
 
-	// Configuration manager
-	Properties props = createBasicProperties();
-	emailConfig = new EmailNotifierUtilityConfig(props);
-
 	// Email Notifier
 	mockEmailer = mock(CFEmailNotifier.class);
 	when(mockEmailer.isConfigured()).thenReturn(true);
@@ -131,8 +136,18 @@ public class NotifierProcessorTest {
     public static void tearDownAfterClass() throws Exception {
     }
 
+    /**
+     * This tests the NotifierProcessor and the EmailHandler.
+     *
+     * @throws Exception
+     */
     @Test
-    public void testBasicEmail() throws Exception {
+    public void testEmail() throws Exception {
+
+	// Configuration manager
+	Properties props = createEmailProperties();
+	EmailNotifierUtilityConfig emailConfig = new EmailNotifierUtilityConfig(
+		props);
 
 	// Create the Email notifier
 	IHandler notificationHandler = new EmailHandler(emailConfig,
@@ -164,21 +179,95 @@ public class NotifierProcessorTest {
 			.getRules()));
     }
 
+    /**
+     * Test JIRA logic: Issue exists; update descriptions. Other tests that
+     * would be nice: new issue, add comment
+     *
+     * @throws Exception
+     */
+    @Test
+    public void testJiraExistingIssueDescription() throws Exception {
+
+	// Configuration manager
+	Properties props = createJiraProperties();
+	JiraIntegrationUtilityConfig jiraConfig = new JiraIntegrationUtilityConfig(
+		props);
+
+	// Create the mock jira connector
+	Issue mockIssue = mock(Issue.class);
+	JiraConnector mockJiraConnector = createMockJiraConnector(mockIssue);
+
+	// Create the notifier
+	IHandler notificationHandler = new JIRAHandler(jiraConfig,
+		mockJiraConnector);
+	NotifierProcessor notifier = new NotifierProcessor(jiraConfig,
+		mockProtexServerWrapper, notificationHandler,
+		mockEmailer.getEmailContentMap(), PROJECT_NAME, PROJECT_NAME);
+
+	// Run notifier to update JIRA
+	notifier.process();
+
+	// Verify that jira connector gets called to update description of our
+	// mock issue
+	verify(mockJiraConnector).updateDescriptionForIssue(mockIssue,
+		JIRA_ISSUE_DESCRIPTION);
+    }
+
+    private JiraConnector createMockJiraConnector(Issue mockIssue)
+	    throws Exception {
+	BasicProject mockJiraProject = mock(BasicProject.class);
+	JiraConnector mockJiraConnector = mock(JiraConnector.class);
+	when(mockJiraConnector.getProjectByName(PROJECT_NAME)).thenReturn(
+		mockJiraProject);
+
+	when(
+		mockJiraConnector.getIssueBySummaryName(
+			PROTEX_SUMMARY_COMBINED, mockJiraProject)).thenReturn(
+		mockIssue);
+	return mockJiraConnector;
+    }
+
+    private static Properties createEmailProperties() {
+	Properties props = createBasicProperties();
+
+	props.setProperty("email.smtp.address",
+		"mailrelay.blackducksoftware.com");
+	props.setProperty("email.smtp.from", "aaa@blackducksoftware.com");
+	props.setProperty("email.smtp.to",
+		"aaa@blackducksoftware.com,blackhole@blackducksoftware.com");
+
+	return props;
+    }
+
+    private static Properties createJiraProperties() {
+	Properties props = createBasicProperties();
+
+	props.setProperty("jira.url", "http://jira.test.com:8080");
+	props.setProperty("jira.admin.name", "jiraUsername");
+	props.setProperty("jira.admin.password", "jiraPassword");
+	props.setProperty("jira.default.summary.combined",
+		PROTEX_SUMMARY_COMBINED);
+	props.setProperty("jira.default.summary.component",
+		"Protex Component Conflict");
+	props.setProperty("jira.default.issue.type", "task");
+	props.setProperty("jira.combined.ticket", "true");
+
+	return props;
+    }
+
     private static Properties createBasicProperties() {
 	Properties props = new Properties();
 	props.setProperty("protex.server.name", "https://se-px01.dc1.lan/");
 	props.setProperty("protex.user.name",
 		"unitTester@blackducksoftware.com");
 	props.setProperty("protex.password", "blackduck");
-	props.setProperty("email.smtp.address",
-		"mailrelay.blackducksoftware.com");
-	props.setProperty("email.smtp.from", "aaa@blackducksoftware.com");
-	props.setProperty("email.smtp.to",
-		"aaa@blackducksoftware.com,blackhole@blackducksoftware.com");
-	props.setProperty("email.trigger.rules",
-		"PENDING,CONFLICTS,NON_APPROVED");
+
 	props.setProperty("notifier.show.filepaths", "false");
 	props.setProperty("notifier.show.filepaths.maxcount", "10");
+
+	props.setProperty("email.trigger.rules",
+		"PENDING,CONFLICTS,NON_APPROVED");
+
 	return props;
     }
 
